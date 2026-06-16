@@ -127,16 +127,13 @@ jobs:
           Add this URL in Jellyfin Dashboard -> Plugins -> Repositories:
 
           \`\`\`
-          https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/gh-pages/manifest.json
+          https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/manifest.json
           \`\`\`
           EOF
 
       - name: Publish Jellyfin repository manifest
         shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git fetch origin gh-pages || true
           if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
             git worktree add gh-pages origin/gh-pages

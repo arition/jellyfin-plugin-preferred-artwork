@@ -4,6 +4,10 @@ Preferred Artwork is a Jellyfin remote image provider plugin that proxies one or
 
 Use it when you want metadata in one language but artwork in another language, or when the stock provider returns low-resolution artwork.
 
+## Plugin Repo
+
+<https://arition.github.io/jellyfin-plugin-preferred-artwork/manifest.json>
+
 ## How it works
 
 The plugin exposes a new image provider named `Preferred Artwork`. When Jellyfin asks it for remote images, it calls Jellyfin's existing provider manager for each configured source provider, requests all languages, merges the returned `RemoteImageInfo` records, filters them, and returns a ranked list to Jellyfin.
@@ -24,24 +28,3 @@ dotnet publish Jellyfin.Plugin.PreferredArtwork/Jellyfin.Plugin.PreferredArtwork
 
 Copy the publish output into a plugin folder under Jellyfin's plugins directory and restart Jellyfin.
 
-## GitHub Actions release flow
-
-This repository includes two workflows:
-
-1. `Build` runs on pushes and pull requests to `main` or `master`.
-2. `Release` runs on tags like `v1.0.0.0` and publishes a GitHub release asset plus a Jellyfin repository manifest on the `gh-pages` branch.
-
-To publish a release:
-
-```bash
-git tag v1.0.0.0
-git push origin v1.0.0.0
-```
-
-After the release workflow completes, add this repository URL in Jellyfin Dashboard -> Plugins -> Repositories:
-
-```text
-https://raw.githubusercontent.com/<owner>/<repo>/gh-pages/manifest.json
-```
-
-Replace `<owner>/<repo>` with your GitHub repository path. The release workflow requires repository Actions permissions that allow writing contents so it can create releases and push the `gh-pages` branch.
