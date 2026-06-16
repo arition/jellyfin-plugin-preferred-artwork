@@ -1,0 +1,161 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, for example 1.0.0.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: Jellyfin.Plugin.PreferredArtwork/Jellyfin.Plugin.PreferredArtwork.csproj
+  PACKAGE_ID: preferred-artwork-plugin
+  PLUGIN_NAME: Preferred Artwork
+  PLUGIN_GUID: 1fdf375e-ef9e-4c06-9a44-49ee49e5a542
+  TARGET_ABI: 10.11.3.0
+
+jobs:
+  release:
+    name: Build, release, and update plugin repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.version }}"
+            tag="v${version}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            version="${tag#v}"
+          fi
+
+          IFS='.' read -r -a parts <<< "$version"
+          while [ "${#parts[@]}" -lt 4 ]; do
+            parts+=("0")
+          done
+          normalized="${parts[0]}.${parts[1]}.${parts[2]}.${parts[3]}"
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${normalized}" >> "$GITHUB_OUTPUT"
+          echo "asset=${PACKAGE_ID}-${normalized}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore "$PROJECT_PATH"
+
+      - name: Build
+        run: dotnet build "$PROJECT_PATH" --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish "$PROJECT_PATH" --configuration Release --no-build --output dist/plugin
+
+      - name: Package
+        shell: bash
+        run: |
+          cd dist/plugin
+          zip -r "../${{ steps.version.outputs.asset }}" .
+          cd ..
+          md5sum "${{ steps.version.outputs.asset }}" | awk '{print $1}' > "${{ steps.version.outputs.asset }}.md5"
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          notes="Preferred Artwork ${{ steps.version.outputs.version }}"
+          if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            gh release upload "${{ steps.version.outputs.tag }}" \
+              "dist/${{ steps.version.outputs.asset }}" \
+              "dist/${{ steps.version.outputs.asset }}.md5" \
+              --clobber
+          else
+            gh release create "${{ steps.version.outputs.tag }}" \
+              "dist/${{ steps.version.outputs.asset }}" \
+              "dist/${{ steps.version.outputs.asset }}.md5" \
+              --title "${{ steps.version.outputs.tag }}" \
+              --notes "$notes"
+          fi
+
+      - name: Generate Jellyfin repository manifest
+        shell: bash
+        run: |
+          mkdir -p public
+          git fetch origin gh-pages || true
+          if git show origin/gh-pages:manifest.json > public/manifest.json 2>/dev/null; then
+            echo "Using existing gh-pages manifest"
+          else
+            echo "[]" > public/manifest.json
+          fi
+
+          python .github/scripts/update-jellyfin-manifest.py \
+            --manifest public/manifest.json \
+            --guid "$PLUGIN_GUID" \
+            --name "$PLUGIN_NAME" \
+            --owner "${GITHUB_REPOSITORY_OWNER}" \
+            --category "Metadata" \
+            --overview "Proxy existing Jellyfin image providers and prefer artwork by language and resolution" \
+            --description "Preferred Artwork proxies one or more Jellyfin image providers, merges their image results, then filters and sorts artwork by language and resolution." \
+            --version "${{ steps.version.outputs.version }}" \
+            --target-abi "$TARGET_ABI" \
+            --source-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.version.outputs.asset }}" \
+            --checksum "$(cat "dist/${{ steps.version.outputs.asset }}.md5")" \
+            --changelog "Preferred Artwork ${{ steps.version.outputs.version }}"
+
+          cat > public/README.md <<EOF
+          # Preferred Artwork Jellyfin Plugin Repository
+
+          Add this URL in Jellyfin Dashboard -> Plugins -> Repositories:
+
+          \`\`\`
+          https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/gh-pages/manifest.json
+          \`\`\`
+          EOF
+
+      - name: Publish Jellyfin repository manifest
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin gh-pages || true
+          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
+            git worktree add gh-pages origin/gh-pages
+          else
+            git worktree add --detach gh-pages
+            cd gh-pages
+            git checkout --orphan gh-pages
+            git rm -rf . >/dev/null 2>&1 || true
+            cd ..
+          fi
+
+          cp public/manifest.json gh-pages/manifest.json
+          cp public/README.md gh-pages/README.md
+
+          cd gh-pages
+          git add manifest.json README.md
+          if git diff --cached --quiet; then
+            echo "No manifest changes to publish"
+          else
+            git commit -m "Update plugin repository for ${{ steps.version.outputs.tag }}"
+            git push origin HEAD:gh-pages
+          fi

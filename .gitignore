@@ -1,0 +1,10 @@
+bin/
+obj/
+*.user
+*.suo
+*.zip
+*.tar.gz
+*.nupkg
+*.snupkg
+.vs/
+.vscode/

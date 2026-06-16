@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Preferred Artwork</title>
+</head>
+<body>
+    <div id="PreferredArtworkConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="PreferredArtworkConfigForm">
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="SourceProviderName">Source image provider names</label>
+                        <input id="SourceProviderName" name="SourceProviderName" type="text" is="emby-input" />
+                        <div class="fieldDescription">Comma-separated existing providers to proxy, for example TheTVDB,TheMovieDb. This plugin fetches each provider's remote image list, merges the results, then filters and sorts them.</div>
+                    </div>
+
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="LanguageSelectionMode">Language selection mode</label>
+                        <select is="emby-select" id="LanguageSelectionMode" name="LanguageSelectionMode" class="emby-select-withcolor emby-select">
+                            <option value="Disabled">Disabled</option>
+                            <option value="PreferredOnlyWithFallback">Preferred only with fallback</option>
+                            <option value="PreferredFirst">Preferred first, keep all languages</option>
+                        </select>
+                        <div class="fieldDescription">Preferred only with fallback is recommended because Jellyfin can re-sort multi-language results by the item's metadata language.</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="PreferredImageLanguage">Preferred image language</label>
+                        <input id="PreferredImageLanguage" name="PreferredImageLanguage" type="text" is="emby-input" />
+                        <div class="fieldDescription">Language code for artwork, for example ja, zh, zh-TW, or en.</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="FallbackImageLanguages">Fallback image languages</label>
+                        <input id="FallbackImageLanguages" name="FallbackImageLanguages" type="text" is="emby-input" />
+                        <div class="fieldDescription">Comma-separated fallback languages. Leave an empty entry to allow no-language artwork, for example: en,</div>
+                    </div>
+
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="SortMode">Sort mode</label>
+                        <select is="emby-select" id="SortMode" name="SortMode" class="emby-select-withcolor emby-select">
+                            <option value="LanguageThenProviderQuality">Language, then provider quality</option>
+                            <option value="ResolutionThenLanguage">Resolution, then language</option>
+                            <option value="ProviderQualityThenResolution">Provider quality, then resolution</option>
+                        </select>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="MinWidth">Minimum width</label>
+                        <input id="MinWidth" name="MinWidth" type="number" is="emby-input" min="0" />
+                        <div class="fieldDescription">Zero disables width filtering.</div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="MinHeight">Minimum height</label>
+                        <input id="MinHeight" name="MinHeight" type="number" is="emby-input" min="0" />
+                        <div class="fieldDescription">Zero disables height filtering.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="AllowUnknownDimensions" name="AllowUnknownDimensions" type="checkbox" is="emby-checkbox" />
+                            <span>Allow images with unknown dimensions</span>
+                        </label>
+                        <div class="fieldDescription">Disable this for strict resolution filtering.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="IncludeDisabledSourceProvider" name="IncludeDisabledSourceProvider" type="checkbox" is="emby-checkbox" />
+                            <span>Proxy disabled source providers</span>
+                        </label>
+                        <div class="fieldDescription">Useful when you disable the original provider in the library and only expose this filtered proxy.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="AllowAnyLanguageFallback" name="AllowAnyLanguageFallback" type="checkbox" is="emby-checkbox" />
+                            <span>Allow any language if preferred and fallback languages have no matches</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            var PreferredArtworkConfig = {
+                pluginUniqueId: '1fdf375e-ef9e-4c06-9a44-49ee49e5a542'
+            };
+
+            document.querySelector('#PreferredArtworkConfigPage')
+                .addEventListener('pageshow', function() {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(PreferredArtworkConfig.pluginUniqueId).then(function (config) {
+                        document.querySelector('#SourceProviderName').value = config.SourceProviderName || '';
+                        document.querySelector('#LanguageSelectionMode').value = config.LanguageSelectionMode;
+                        document.querySelector('#PreferredImageLanguage').value = config.PreferredImageLanguage || '';
+                        document.querySelector('#FallbackImageLanguages').value = config.FallbackImageLanguages || '';
+                        document.querySelector('#SortMode').value = config.SortMode;
+                        document.querySelector('#MinWidth').value = config.MinWidth || 0;
+                        document.querySelector('#MinHeight').value = config.MinHeight || 0;
+                        document.querySelector('#AllowUnknownDimensions').checked = config.AllowUnknownDimensions;
+                        document.querySelector('#IncludeDisabledSourceProvider').checked = config.IncludeDisabledSourceProvider;
+                        document.querySelector('#AllowAnyLanguageFallback').checked = config.AllowAnyLanguageFallback;
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+            document.querySelector('#PreferredArtworkConfigForm')
+                .addEventListener('submit', function(e) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(PreferredArtworkConfig.pluginUniqueId).then(function (config) {
+                        config.SourceProviderName = document.querySelector('#SourceProviderName').value;
+                        config.LanguageSelectionMode = document.querySelector('#LanguageSelectionMode').value;
+                        config.PreferredImageLanguage = document.querySelector('#PreferredImageLanguage').value;
+                        config.FallbackImageLanguages = document.querySelector('#FallbackImageLanguages').value;
+                        config.SortMode = document.querySelector('#SortMode').value;
+                        config.MinWidth = parseInt(document.querySelector('#MinWidth').value || '0', 10);
+                        config.MinHeight = parseInt(document.querySelector('#MinHeight').value || '0', 10);
+                        config.AllowUnknownDimensions = document.querySelector('#AllowUnknownDimensions').checked;
+                        config.IncludeDisabledSourceProvider = document.querySelector('#IncludeDisabledSourceProvider').checked;
+                        config.AllowAnyLanguageFallback = document.querySelector('#AllowAnyLanguageFallback').checked;
+                        ApiClient.updatePluginConfiguration(PreferredArtworkConfig.pluginUniqueId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+
+                    e.preventDefault();
+                    return false;
+                });
+        </script>
+    </div>
+</body>
+</html>

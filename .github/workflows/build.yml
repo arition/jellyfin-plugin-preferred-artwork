@@ -1,0 +1,52 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: Jellyfin.Plugin.PreferredArtwork/Jellyfin.Plugin.PreferredArtwork.csproj
+  PACKAGE_ID: preferred-artwork-plugin
+
+jobs:
+  build:
+    name: Build plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore "$PROJECT_PATH"
+
+      - name: Build
+        run: dotnet build "$PROJECT_PATH" --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish "$PROJECT_PATH" --configuration Release --no-build --output dist/plugin
+
+      - name: Package
+        run: |
+          cd dist/plugin
+          zip -r "../${PACKAGE_ID}.zip" .
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE_ID }}
+          path: dist/${{ env.PACKAGE_ID }}.zip
+          if-no-files-found: error

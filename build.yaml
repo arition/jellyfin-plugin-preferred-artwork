@@ -1,0 +1,17 @@
+---
+name: "Preferred Artwork"
+guid: "1fdf375e-ef9e-4c06-9a44-49ee49e5a542"
+version: "1.0.0.0"
+targetAbi: "10.11.3.0"
+framework: "net9.0"
+owner: "community"
+overview: "Proxy existing Jellyfin image providers and prefer artwork by language and resolution"
+description: >
+  Preferred Artwork proxies one or more existing Jellyfin remote image providers,
+  merges their remote image results, then filters and sorts artwork by language,
+  fallback language, width, height, provider score, and resolution.
+category: "Metadata"
+artifacts:
+  - "Jellyfin.Plugin.PreferredArtwork.dll"
+changelog: |-
+  - Initial release
