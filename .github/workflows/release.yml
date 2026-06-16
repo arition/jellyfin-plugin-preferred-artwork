@@ -64,7 +64,13 @@ jobs:
         run: dotnet restore "$PROJECT_PATH"
 
       - name: Build
-        run: dotnet build "$PROJECT_PATH" --configuration Release --no-restore
+        run: >
+          dotnet build "$PROJECT_PATH"
+          --configuration Release
+          --no-restore
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:AssemblyVersion=${{ steps.version.outputs.version }}
+          -p:FileVersion=${{ steps.version.outputs.version }}
 
       - name: Publish
         run: dotnet publish "$PROJECT_PATH" --configuration Release --no-build --output dist/plugin
@@ -72,6 +78,11 @@ jobs:
       - name: Package
         shell: bash
         run: |
+          cat > release-notes.md <<EOF
+          Preferred Artwork ${{ steps.version.outputs.version }}
+
+          - Fix plugin startup failure by removing the unsupported IHttpClientFactory activation dependency.
+          EOF
           cd dist/plugin
           zip -r "../${{ steps.version.outputs.asset }}" .
           cd ..
@@ -82,8 +93,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          notes="Preferred Artwork ${{ steps.version.outputs.version }}"
           if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            gh release edit "${{ steps.version.outputs.tag }}" \
+              --title "${{ steps.version.outputs.tag }}" \
+              --notes-file release-notes.md
             gh release upload "${{ steps.version.outputs.tag }}" \
               "dist/${{ steps.version.outputs.asset }}" \
               "dist/${{ steps.version.outputs.asset }}.md5" \
@@ -93,7 +106,7 @@ jobs:
               "dist/${{ steps.version.outputs.asset }}" \
               "dist/${{ steps.version.outputs.asset }}.md5" \
               --title "${{ steps.version.outputs.tag }}" \
-              --notes "$notes"
+              --notes-file release-notes.md
           fi
 
       - name: Generate Jellyfin repository manifest
@@ -119,7 +132,7 @@ jobs:
             --target-abi "$TARGET_ABI" \
             --source-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.version.outputs.asset }}" \
             --checksum "$(cat "dist/${{ steps.version.outputs.asset }}.md5")" \
-            --changelog "Preferred Artwork ${{ steps.version.outputs.version }}"
+            --changelog "Fix plugin startup failure by removing the unsupported IHttpClientFactory activation dependency."
 
           cat > public/README.md <<EOF
           # Preferred Artwork Jellyfin Plugin Repository
@@ -134,6 +147,9 @@ jobs:
       - name: Publish Jellyfin repository manifest
         shell: bash
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git fetch origin gh-pages || true
           if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
             git worktree add gh-pages origin/gh-pages

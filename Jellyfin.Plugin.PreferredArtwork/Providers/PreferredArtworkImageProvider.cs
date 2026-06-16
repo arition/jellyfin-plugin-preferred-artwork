@@ -18,18 +18,16 @@ namespace Jellyfin.Plugin.PreferredArtwork.Providers;
 /// </summary>
 public sealed class PreferredArtworkImageProvider : IRemoteImageProvider, IHasOrder
 {
+    private static readonly HttpClient HttpClient = new();
     private readonly IProviderManager _providerManager;
-    private readonly IHttpClientFactory _httpClientFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PreferredArtworkImageProvider"/> class.
     /// </summary>
     /// <param name="providerManager">Provider manager used to query the source provider.</param>
-    /// <param name="httpClientFactory">HTTP client factory used to download selected images.</param>
-    public PreferredArtworkImageProvider(IProviderManager providerManager, IHttpClientFactory httpClientFactory)
+    public PreferredArtworkImageProvider(IProviderManager providerManager)
     {
         _providerManager = providerManager;
-        _httpClientFactory = httpClientFactory;
     }
 
     /// <inheritdoc />
@@ -87,7 +85,7 @@ public sealed class PreferredArtworkImageProvider : IRemoteImageProvider, IHasOr
     /// <inheritdoc />
     public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
     {
-        return _httpClientFactory.CreateClient().GetAsync(new Uri(url), cancellationToken);
+        return HttpClient.GetAsync(new Uri(url), cancellationToken);
     }
 
     private static bool MeetsDimensionFilter(RemoteImageInfo image, PluginConfiguration configuration)
