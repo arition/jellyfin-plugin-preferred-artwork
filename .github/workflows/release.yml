@@ -78,11 +78,6 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          cat > release-notes.md <<EOF
-          Preferred Artwork ${{ steps.version.outputs.version }}
-
-          - Fix plugin startup failure by removing the unsupported IHttpClientFactory activation dependency.
-          EOF
           cd dist/plugin
           zip -r "../${{ steps.version.outputs.asset }}" .
           cd ..
