@@ -123,6 +123,15 @@ public sealed class PreferredArtworkImageProvider : IRemoteImageProvider, IHasOr
             return images;
         }
 
+        return images
+            .GroupBy(image => image.Type)
+            .SelectMany(group => ApplyLanguageSelectionForType(group.ToList(), configuration));
+    }
+
+    private static IEnumerable<RemoteImageInfo> ApplyLanguageSelectionForType(
+        IReadOnlyList<RemoteImageInfo> images,
+        PluginConfiguration configuration)
+    {
         var preferred = images
             .Where(image => IsLanguageMatch(image.Language, configuration.PreferredImageLanguage))
             .ToList();

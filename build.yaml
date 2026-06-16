@@ -1,7 +1,7 @@
 ---
 name: "Preferred Artwork"
 guid: "1fdf375e-ef9e-4c06-9a44-49ee49e5a542"
-version: "1.0.1.0"
+version: "1.0.2.0"
 targetAbi: "10.11.3.0"
 framework: "net9.0"
 owner: "community"
@@ -14,4 +14,5 @@ category: "Metadata"
 artifacts:
   - "Jellyfin.Plugin.PreferredArtwork.dll"
 changelog: |-
-  - Fix plugin startup failure by removing the unsupported IHttpClientFactory activation dependency.
+  - Fix no-language backdrops being filtered out when another image type has preferred-language artwork.
+  - Apply preferred and fallback language selection independently per image type.
